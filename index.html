@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WISE RUN - Edition Spéciale</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        
+        /* Interface UI */
+        #ui {
+            position: absolute; top: 30px; left: 30px;
+            color: #fff; letter-spacing: 3px;
+            pointer-events: none;
+        }
+        .brand { font-weight: bold; color: #00ffff; font-size: 28px; text-shadow: 0 0 10px #00ffff; }
+        .score { font-size: 14px; opacity: 0.8; margin-top: 5px; color: #fff; }
+
+        /* Écran Game Over */
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 50px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            z-index: 10;
+        }
+        h1 { font-size: 40px; margin: 0; letter-spacing: 5px; color: #ff0066; }
+        #final-score { font-size: 20px; margin: 20px 0; opacity: 0.9; }
+        button {
+            background: transparent; 
+            border: 1px solid #00ffff; 
+            color: #00ffff; 
+            padding: 12px 30px;
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        button:hover { background: #00ffff; color: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="brand">WISE RUN</div>
+        <div id="score-display" class="score">DISTANCE: 0m</div>
+    </div>
+
+    <div id="game-over">
+        <h1>GAME OVER</h1>
+        <div id="final-score">SCORE : 0</div>
+        <button onclick="location.reload()">REPRENDRE LA MISSION</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+
+        // --- SCÈNE ET RENDU ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- LUMIÈRES ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x00ffff, 2);
+        pointLight.position.set(0, 5, 5);
+        scene.add(pointLight);
+
+        // --- VÉHICULE ---
+        const carGeometry = new THREE.BoxGeometry(1.2, 0.6, 2.5);
+        const carMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        const car = new THREE.Mesh(carGeometry, carMaterial);
+        car.position.y = 0.5;
+        scene.add(car);
+
+        // --- DÉCOR (Grille) ---
+        const gridHelper = new THREE.GridHelper(500, 100, 0x00ffff, 0x111111);
+        scene.add(gridHelper);
+
+        camera.position.set(0, 4, 8);
+        camera.lookAt(0, 1, 0);
+
+        // --- ÉTAT DU JEU ---
+        let targetX = 0;
+        const lanes = [-4, 0, 4];
+        let currentLane = 1;
+        let score = 0;
+        let gameActive = true;
+        let gameSpeed = 1.8;
+        const obstacles = [];
+
+        // Obstacles
+        const obsGeo = new THREE.BoxGeometry(2.5, 5, 1);
+        const obsMat = new THREE.MeshPhongMaterial({ color: 0xff0066, transparent: true, opacity: 0.8 });
+
+        function spawnObstacle() {
+            if (!gameActive) return;
+            const obs = new THREE.Mesh(obsGeo, obsMat);
+            const laneIndex = Math.floor(Math.random() * 3);
+            obs.position.set(lanes[laneIndex], 2.5, -120);
+            scene.add(obs);
+            obstacles.push(obs);
+        }
+
+        setInterval(spawnObstacle, 1000);
+
+        // Contrôles
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowLeft' && currentLane > 0) currentLane--;
+            if (e.key === 'ArrowRight' && currentLane < 2) currentLane++;
+            targetX = lanes[currentLane];
+        });
+
+        // --- BOUCLE PRINCIPALE ---
+        function animate() {
+            if (!gameActive) return;
+            requestAnimationFrame(animate);
+
+            // Mouvement du décor
+            gridHelper.position.z += gameSpeed;
+            if (gridHelper.position.z > 10) gridHelper.position.z = 0;
+
+            // Mouvement du véhicule
+            car.position.x += (targetX - car.position.x) * 0.15;
+            car.rotation.z = -(car.position.x - targetX) * 0.25;
+
+            // Gestion obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].position.z += gameSpeed;
+
+                // Détection de collision
+                if (Math.abs(obstacles[i].position.z - car.position.z) < 1.5 && 
+                    Math.abs(obstacles[i].position.x - car.position.x) < 1.5) {
+                    endGame();
+                }
+
+                // Nettoyage
+                if (obstacles[i].position.z > 15) {
+                    scene.remove(obstacles[i]);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            score += 1;
+            document.getElementById('score-display').innerText = `DISTANCE: ${Math.floor(score/10)}m`;
+
+            renderer.render(scene, camera);
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = `DISTANCE PARCOURUE : ${Math.floor(score/10)}m`;
+        }
+
+        animate();
+
+        // Responsive
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
