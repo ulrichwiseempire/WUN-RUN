@@ -3,22 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WISE RUN - Mobile Edition</title>
+    <title>WISE DELIVERY - RUN</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; touch-action: manipulation; }
-        canvas { display: block; }
-        
+        body { margin: 0; overflow: hidden; background-color: #222; font-family: 'Arial', sans-serif; touch-action: manipulation; }
         #ui {
-            position: absolute; top: 20px; left: 20px;
-            color: #fff; letter-spacing: 3px; pointer-events: none; z-index: 5;
+            position: absolute; top: 20px; left: 20px; color: #fff; z-index: 5; pointer-events: none;
         }
-        .brand { font-weight: bold; color: #00ffff; font-size: 24px; text-shadow: 0 0 10px #00ffff; }
-        .score { font-size: 12px; opacity: 0.8; margin-top: 5px; }
-
-        /* Zones de contrôle tactiles */
-        .touch-zone {
-            position: absolute; top: 0; width: 50%; height: 100%; z-index: 2;
-        }
+        .brand { font-weight: bold; color: #ffcc00; font-size: 24px; text-shadow: 2px 2px #000; }
+        .score { font-size: 18px; margin-top: 5px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; }
+        
+        .touch-zone { position: absolute; top: 0; width: 50%; height: 100%; z-index: 2; }
         #left-zone { left: 0; }
         #right-zone { right: 0; }
 
@@ -26,131 +20,155 @@
             display: none; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%); text-align: center;
             color: white; background: rgba(0, 0, 0, 0.9);
-            padding: 30px; border: 1px solid #00ffff; z-index: 10; width: 80%;
+            padding: 30px; border: 3px solid #ffcc00; z-index: 10; width: 80%; border-radius: 15px;
         }
-        h1 { font-size: 30px; color: #ff0066; margin: 0; }
         button {
-            background: transparent; border: 1px solid #00ffff; color: #00ffff;
-            padding: 15px 30px; cursor: pointer; margin-top: 20px; font-weight: bold;
+            background: #ffcc00; border: none; color: #000;
+            padding: 15px 30px; cursor: pointer; margin-top: 20px; font-weight: bold; border-radius: 10px; font-size: 18px;
         }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <div class="brand">WISE RUN</div>
-        <div id="score-display" class="score">DISTANCE: 0m</div>
+        <div class="brand">WISE DELIVERY 📦</div>
+        <div id="score-display" class="score">COLIS LIVRÉS: 0</div>
     </div>
 
     <div id="left-zone" class="touch-zone"></div>
     <div id="right-zone" class="touch-zone"></div>
 
     <div id="game-over">
-        <h1>GAME OVER</h1>
-        <div id="final-score" style="margin: 15px 0;">DISTANCE : 0m</div>
-        <button onclick="location.reload()">REPRENDRE LA MISSION</button>
+        <h1>LIVRAISON ÉCHOUÉE ! 💥</h1>
+        <div id="final-score" style="margin: 15px 0; font-size: 20px;">SCORE : 0</div>
+        <button onclick="location.reload()">RECOMMENCER</button>
     </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
 
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Ciel bleu ville
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x00ffff, 2);
-        pointLight.position.set(0, 5, 5);
-        scene.add(pointLight);
+        // Lumières
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+        scene.add(light);
 
-        const carGeometry = new THREE.BoxGeometry(1.2, 0.6, 2.5);
-        const carMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-        const car = new THREE.Mesh(carGeometry, carMaterial);
-        car.position.y = 0.5;
-        scene.add(car);
+        // --- LA ROUTE ---
+        const roadGeo = new THREE.PlaneGeometry(15, 1000);
+        const roadMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        scene.add(road);
 
-        const gridHelper = new THREE.GridHelper(500, 100, 0x00ffff, 0x111111);
-        scene.add(gridHelper);
+        // Lignes de la route
+        const lineGeo = new THREE.PlaneGeometry(0.2, 1000);
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const line1 = new THREE.Mesh(lineGeo, lineMat);
+        line1.rotation.x = -Math.PI / 2;
+        line1.position.set(-2.5, 0.01, 0);
+        scene.add(line1);
+        const line2 = line1.clone();
+        line2.position.set(2.5, 0.01, 0);
+        scene.add(line2);
 
-        camera.position.set(0, 4, 8);
-        camera.lookAt(0, 1, 0);
+        // --- LE LIVREUR (Un perso stylisé) ---
+        const bodyGeo = new THREE.BoxGeometry(1, 1.5, 0.8);
+        const bodyMat = new THREE.MeshPhongMaterial({ color: 0x0077ff }); // T-shirt bleu
+        const player = new THREE.Group();
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        player.add(body);
 
+        // Le Colis sur le dos
+        const packGeo = new THREE.BoxGeometry(0.8, 0.8, 0.5);
+        const packMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // Carton brun
+        const pack = new THREE.Mesh(packGeo, packMat);
+        pack.position.set(0, 0.2, -0.6);
+        player.add(pack);
+
+        player.position.y = 0.75;
+        scene.add(player);
+
+        camera.position.set(0, 4, 7);
+        camera.lookAt(0, 1, -2);
+
+        // État
         let targetX = 0;
         const lanes = [-4, 0, 4];
         let currentLane = 1;
         let score = 0;
         let gameActive = true;
-        let gameSpeed = 1.8;
+        let speed = 0.6;
         const obstacles = [];
 
-        const obsGeo = new THREE.BoxGeometry(2.5, 5, 1);
-        const obsMat = new THREE.MeshPhongMaterial({ color: 0xff0066, transparent: true, opacity: 0.8 });
-
+        // --- OBSTACLES (Camions / Barrières) ---
         function spawnObstacle() {
             if (!gameActive) return;
-            const obs = new THREE.Mesh(obsGeo, obsMat);
-            const laneIndex = Math.floor(Math.random() * 3);
-            obs.position.set(lanes[laneIndex], 2.5, -120);
+            const isTruck = Math.random() > 0.5;
+            const geo = isTruck ? new THREE.BoxGeometry(3, 3, 5) : new THREE.BoxGeometry(3, 1, 1);
+            const mat = new THREE.MeshPhongMaterial({ color: isTruck ? 0xff4400 : 0xffff00 });
+            const obs = new THREE.Mesh(geo, mat);
+            obs.position.set(lanes[Math.floor(Math.random() * 3)], isTruck ? 1.5 : 0.5, -100);
             scene.add(obs);
             obstacles.push(obs);
         }
-        setInterval(spawnObstacle, 1000);
+        setInterval(spawnObstacle, 1200);
 
-        // --- CONTRÔLES TACTILES ---
-        document.getElementById('left-zone').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (currentLane > 0) currentLane--;
+        // Contrôles
+        const move = (dir) => {
+            if (dir === 'left' && currentLane > 0) currentLane--;
+            if (dir === 'right' && currentLane < 2) currentLane++;
             targetX = lanes[currentLane];
-        });
+        };
 
-        document.getElementById('right-zone').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (currentLane < 2) currentLane++;
-            targetX = lanes[currentLane];
-        });
-
-        // --- CLAVIER (pour PC aussi) ---
+        document.getElementById('left-zone').addEventListener('touchstart', (e) => { e.preventDefault(); move('left'); });
+        document.getElementById('right-zone').addEventListener('touchstart', (e) => { e.preventDefault(); move('right'); });
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' && currentLane > 0) currentLane--;
-            if (e.key === 'ArrowRight' && currentLane < 2) currentLane++;
-            targetX = lanes[currentLane];
+            if (e.key === 'ArrowLeft') move('left');
+            if (e.key === 'ArrowRight') move('right');
         });
 
         function animate() {
             if (!gameActive) return;
             requestAnimationFrame(animate);
 
-            gridHelper.position.z += gameSpeed;
-            if (gridHelper.position.z > 10) gridHelper.position.z = 0;
+            // Animation course (balancement)
+            player.position.y = 0.75 + Math.sin(Date.now() * 0.01) * 0.1;
+            player.position.x += (targetX - player.position.x) * 0.15;
+            player.rotation.y = (targetX - player.position.x) * 0.1;
 
-            car.position.x += (targetX - car.position.x) * 0.15;
-            car.rotation.z = -(car.position.x - targetX) * 0.25;
+            // Sol qui défile
+            road.position.z += speed * 10;
+            if (road.position.z > 100) road.position.z = 0;
+            line1.position.z = road.position.z;
+            line2.position.z = road.position.z;
 
+            // Obstacles
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].position.z += gameSpeed;
-                if (Math.abs(obstacles[i].position.z - car.position.z) < 1.5 && 
-                    Math.abs(obstacles[i].position.x - car.position.x) < 1.5) {
-                    endGame();
+                obstacles[i].position.z += speed * 2;
+                
+                // Collision simple
+                if (Math.abs(obstacles[i].position.z - player.position.z) < 2 && 
+                    Math.abs(obstacles[i].position.x - player.position.x) < 1.5) {
+                    gameActive = false;
+                    document.getElementById('game-over').style.display = 'block';
+                    document.getElementById('final-score').innerText = `COLIS LIVRÉS : ${Math.floor(score/10)}`;
                 }
-                if (obstacles[i].position.z > 15) {
+
+                if (obstacles[i].position.z > 20) {
                     scene.remove(obstacles[i]);
                     obstacles.splice(i, 1);
                 }
             }
 
             score += 1;
+            speed += 0.0001; // Accélération progressive
             document.getElementById('score-display').innerText = `DISTANCE: ${Math.floor(score/10)}m`;
             renderer.render(scene, camera);
-        }
-
-        function endGame() {
-            gameActive = false;
-            document.getElementById('game-over').style.display = 'block';
-            document.getElementById('final-score').innerText = `DISTANCE : ${Math.floor(score/10)}m`;
         }
 
         animate();
