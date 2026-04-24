@@ -3,122 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WISE DELIVERY - RUN</title>
+    <title>WISE DELIVERY - SUBWAY EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #222; font-family: 'Arial', sans-serif; touch-action: manipulation; }
-        #ui {
-            position: absolute; top: 20px; left: 20px; color: #fff; z-index: 5; pointer-events: none;
-        }
-        .brand { font-weight: bold; color: #ffcc00; font-size: 24px; text-shadow: 2px 2px #000; }
-        .score { font-size: 18px; margin-top: 5px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; }
-        
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Arial', sans-serif; touch-action: manipulation; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #fff; z-index: 5; pointer-events: none; }
+        .brand { font-weight: bold; color: #ffcc00; font-size: 26px; text-shadow: 2px 2px #000; }
+        .score { font-size: 20px; margin-top: 5px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 8px; border: 1px solid #ffcc00; }
+        #loading { position: absolute; width: 100%; height: 100%; background: #000; color: #ffcc00; display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 24px; font-weight: bold; }
         .touch-zone { position: absolute; top: 0; width: 50%; height: 100%; z-index: 2; }
         #left-zone { left: 0; }
         #right-zone { right: 0; }
-
-        #game-over {
-            display: none; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); text-align: center;
-            color: white; background: rgba(0, 0, 0, 0.9);
-            padding: 30px; border: 3px solid #ffcc00; z-index: 10; width: 80%; border-radius: 15px;
-        }
-        button {
-            background: #ffcc00; border: none; color: #000;
-            padding: 15px 30px; cursor: pointer; margin-top: 20px; font-weight: bold; border-radius: 10px; font-size: 18px;
-        }
+        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; background: rgba(0, 0, 0, 0.9); padding: 40px; border: 4px solid #ffcc00; z-index: 10; width: 85%; border-radius: 20px; }
+        button { background: #ffcc00; border: none; color: #000; padding: 20px 40px; cursor: pointer; margin-top: 25px; font-weight: bold; border-radius: 12px; font-size: 22px; box-shadow: 0 4px #b89400; }
+        button:active { transform: translateY(4px); box-shadow: none; }
     </style>
 </head>
 <body>
 
+    <div id="loading">PRÉPARATION DU LIVREUR...</div>
+
     <div id="ui">
-        <div class="brand">WISE DELIVERY 📦</div>
-        <div id="score-display" class="score">COLIS LIVRÉS: 0</div>
+        <div class="brand">WISE RUN 📦</div>
+        <div id="score-display" class="score">DISTANCE: 0m</div>
     </div>
 
     <div id="left-zone" class="touch-zone"></div>
     <div id="right-zone" class="touch-zone"></div>
 
     <div id="game-over">
-        <h1>LIVRAISON ÉCHOUÉE ! 💥</h1>
-        <div id="final-score" style="margin: 15px 0; font-size: 20px;">SCORE : 0</div>
-        <button onclick="location.reload()">RECOMMENCER</button>
+        <h1 style="color: #ff4444; font-size: 40px;">CRASH ! 💥</h1>
+        <div id="final-score" style="margin: 20px 0; font-size: 24px;">DISTANCE : 0m</div>
+        <button onclick="location.reload()">REPRENDRE LA MISSION</button>
     </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+
+        // LIEN DU MODÈLE QUE TU AS TROUVÉ
+        const MODEL_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Ciel bleu ville
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        scene.background = new THREE.Color(0x54a0ff);
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // Lumières
-        const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-        scene.add(light);
+        // Lumières (pour un beau rendu 3D)
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+        scene.add(hemiLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(5, 15, 10);
+        scene.add(sunLight);
 
-        // --- LA ROUTE ---
-        const roadGeo = new THREE.PlaneGeometry(15, 1000);
-        const roadMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+        // La Route (3 voies comme Subway Surfers)
+        const roadGeo = new THREE.PlaneGeometry(12, 2000);
+        const roadMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI / 2;
         scene.add(road);
 
-        // Lignes de la route
-        const lineGeo = new THREE.PlaneGeometry(0.2, 1000);
-        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const line1 = new THREE.Mesh(lineGeo, lineMat);
-        line1.rotation.x = -Math.PI / 2;
-        line1.position.set(-2.5, 0.01, 0);
-        scene.add(line1);
-        const line2 = line1.clone();
-        line2.position.set(2.5, 0.01, 0);
-        scene.add(line2);
+        // Lignes blanches défilantes
+        const lines = new THREE.Group();
+        for(let i = 0; i < 40; i++) {
+            const lGeo = new THREE.PlaneGeometry(0.3, 5);
+            const lMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const line = new THREE.Mesh(lGeo, lMat);
+            line.rotation.x = -Math.PI / 2;
+            line.position.set(0, 0.02, -i * 15);
+            lines.add(line);
+        }
+        scene.add(lines);
 
-        // --- LE LIVREUR (Un perso stylisé) ---
-        const bodyGeo = new THREE.BoxGeometry(1, 1.5, 0.8);
-        const bodyMat = new THREE.MeshPhongMaterial({ color: 0x0077ff }); // T-shirt bleu
-        const player = new THREE.Group();
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        player.add(body);
-
-        // Le Colis sur le dos
-        const packGeo = new THREE.BoxGeometry(0.8, 0.8, 0.5);
-        const packMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // Carton brun
-        const pack = new THREE.Mesh(packGeo, packMat);
-        pack.position.set(0, 0.2, -0.6);
-        player.add(pack);
-
-        player.position.y = 0.75;
-        scene.add(player);
-
-        camera.position.set(0, 4, 7);
-        camera.lookAt(0, 1, -2);
-
-        // État
-        let targetX = 0;
+        // Variables de jeu
+        let player, mixer, clock = new THREE.Clock();
+        let currentLane = 1; // 0: gauche, 1: milieu, 2: droite
         const lanes = [-4, 0, 4];
-        let currentLane = 1;
+        let targetX = 0;
         let score = 0;
-        let gameActive = true;
-        let speed = 0.6;
+        let speed = 0.8;
+        let gameActive = false;
         const obstacles = [];
 
-        // --- OBSTACLES (Camions / Barrières) ---
-        function spawnObstacle() {
-            if (!gameActive) return;
-            const isTruck = Math.random() > 0.5;
-            const geo = isTruck ? new THREE.BoxGeometry(3, 3, 5) : new THREE.BoxGeometry(3, 1, 1);
-            const mat = new THREE.MeshPhongMaterial({ color: isTruck ? 0xff4400 : 0xffff00 });
-            const obs = new THREE.Mesh(geo, mat);
-            obs.position.set(lanes[Math.floor(Math.random() * 3)], isTruck ? 1.5 : 0.5, -100);
-            scene.add(obs);
-            obstacles.push(obs);
-        }
-        setInterval(spawnObstacle, 1200);
+        // --- CHARGEMENT DU PERSONNAGE ---
+        const loader = new GLTFLoader();
+        loader.load(MODEL_URL, (gltf) => {
+            player = gltf.scene;
+            player.scale.set(0.6, 0.6, 0.6);
+            scene.add(player);
 
-        // Contrôles
+            mixer = new THREE.AnimationMixer(player);
+            // On joue l'animation de course du robot ("Running")
+            const runAnim = gltf.animations.find(a => a.name === 'Running');
+            if(runAnim) mixer.clipAction(runAnim).play();
+
+            document.getElementById('loading').style.display = 'none';
+            gameActive = true;
+            camera.position.set(0, 4, 8);
+            camera.lookAt(0, 1, 0);
+            animate();
+        });
+
+        // --- APPARITION DES VÉHICULES ---
+        function spawnVehicle() {
+            if(!gameActive) return;
+            const isTruck = Math.random() > 0.4;
+            const geo = isTruck ? new THREE.BoxGeometry(3, 2.5, 6) : new THREE.BoxGeometry(2.5, 1.5, 4);
+            const mat = new THREE.MeshPhongMaterial({ color: isTruck ? 0xff4757 : 0xffa502 });
+            const vehicle = new THREE.Mesh(geo, mat);
+            
+            vehicle.position.set(lanes[Math.floor(Math.random() * 3)], isTruck ? 1.25 : 0.75, -120);
+            scene.add(vehicle);
+            obstacles.push(vehicle);
+            
+            // On accélère le rythme
+            setTimeout(spawnVehicle, Math.max(700, 1500 - (score / 10)));
+        }
+        spawnVehicle();
+
+        // Contrôles tactiles
         const move = (dir) => {
             if (dir === 'left' && currentLane > 0) currentLane--;
             if (dir === 'right' && currentLane < 2) currentLane++;
@@ -136,42 +141,42 @@
             if (!gameActive) return;
             requestAnimationFrame(animate);
 
-            // Animation course (balancement)
-            player.position.y = 0.75 + Math.sin(Date.now() * 0.01) * 0.1;
+            const delta = clock.getDelta();
+            if (mixer) mixer.update(delta);
+
+            // Déplacement fluide du personnage
             player.position.x += (targetX - player.position.x) * 0.15;
-            player.rotation.y = (targetX - player.position.x) * 0.1;
+            player.rotation.y = (targetX - player.position.x) * 0.2;
 
-            // Sol qui défile
-            road.position.z += speed * 10;
-            if (road.position.z > 100) road.position.z = 0;
-            line1.position.z = road.position.z;
-            line2.position.z = road.position.z;
+            // Défilement des lignes (effet de vitesse)
+            lines.position.z += speed * 1.5;
+            if(lines.position.z > 15) lines.position.z = 0;
 
-            // Obstacles
+            // Gestion des véhicules (obstacles)
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].position.z += speed * 2;
-                
-                // Collision simple
-                if (Math.abs(obstacles[i].position.z - player.position.z) < 2 && 
-                    Math.abs(obstacles[i].position.x - player.position.x) < 1.5) {
+                obstacles[i].position.z += speed;
+
+                // Collision
+                const dx = Math.abs(obstacles[i].position.x - player.position.x);
+                const dz = Math.abs(obstacles[i].position.z - player.position.z);
+                if (dx < 2.5 && dz < 2) {
                     gameActive = false;
                     document.getElementById('game-over').style.display = 'block';
-                    document.getElementById('final-score').innerText = `COLIS LIVRÉS : ${Math.floor(score/10)}`;
+                    document.getElementById('final-score').innerText = `DISTANCE : ${Math.floor(score)}m`;
                 }
 
+                // Supprimer si passé
                 if (obstacles[i].position.z > 20) {
                     scene.remove(obstacles[i]);
                     obstacles.splice(i, 1);
                 }
             }
 
-            score += 1;
-            speed += 0.0001; // Accélération progressive
-            document.getElementById('score-display').innerText = `DISTANCE: ${Math.floor(score/10)}m`;
+            score += speed / 5;
+            speed += 0.0002; // Le jeu devient de plus en plus dur
+            document.getElementById('score-display').innerText = `DISTANCE: ${Math.floor(score)}m`;
             renderer.render(scene, camera);
         }
-
-        animate();
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
