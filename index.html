@@ -39,7 +39,7 @@
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-        // LIEN DIRECT VERS LE MODÈLE DU ROBOT
+        // LIEN DIRECT VERS LE MODÈLE
         const MODEL_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
 
         const scene = new THREE.Scene();
@@ -63,7 +63,7 @@
         road.rotation.x = -Math.PI / 2;
         scene.add(road);
 
-        // Lignes blanches
+        // Lignes blanches défilantes
         const lines = new THREE.Group();
         for(let i = 0; i < 40; i++) {
             const lGeo = new THREE.PlaneGeometry(0.3, 5);
@@ -80,7 +80,7 @@
         const lanes = [-4, 0, 4];
         let targetX = 0;
         let score = 0;
-        let speed = 0.9;
+        let speed = 1.0;
         let gameActive = false;
         const obstacles = [];
 
@@ -114,7 +114,7 @@
             scene.add(vehicle);
             obstacles.push(vehicle);
             
-            setTimeout(spawnVehicle, Math.max(600, 1400 - (score / 15)));
+            setTimeout(spawnVehicle, Math.max(500, 1200 - (score / 10)));
         }
 
         const move = (dir) => {
@@ -157,7 +157,7 @@
             }
 
             score += speed / 4;
-            speed += 0.0003; 
+            speed += 0.0004; 
             document.getElementById('score-display').innerText = `DISTANCE: ${Math.floor(score)}m`;
             renderer.render(scene, camera);
         }
